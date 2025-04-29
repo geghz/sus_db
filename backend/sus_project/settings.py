@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'notifications',
     'approvals',
     'django_apscheduler',
-    'user_settings',
     
 ]
 

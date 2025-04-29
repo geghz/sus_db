@@ -18,6 +18,5 @@ urlpatterns = [
     path('api/roles/', include('roles.urls')),
     path('api/notifications/', include('notifications.urls')),
     path('api/requests/', include('approvals.urls')),
-    path('api/user-settings/', include('user_settings.urls')),
     
 ]
