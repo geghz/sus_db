@@ -1,0 +1,18 @@
+cat > .gitignore << 'EOF'
+# Python
+__pycache__/
+*.py[cod]
+venv/
+*.sqlite3
+.env
+
+# Node / React
+node_modules/
+build/
+front*/node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+EOF
