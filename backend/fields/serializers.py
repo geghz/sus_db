@@ -1,25 +1,21 @@
 from rest_framework import serializers
-from .models import FieldGroup, FieldDefinition, EmployeeFieldValue
+from .models import FieldGroup, FieldDefinition, FieldDefinitionValue
+
+class FieldGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FieldGroup
+        fields = ['id', 'name']
 
 class FieldDefinitionSerializer(serializers.ModelSerializer):
     class Meta:
         model = FieldDefinition
-        fields = ('id','group','name','field_type','required')
+        fields = ['id', 'group', 'code', 'label', 'field_type', 'options']
 
-class FieldGroupSerializer(serializers.ModelSerializer):
-    definitions = FieldDefinitionSerializer(many=True, read_only=True)
-
+class FieldDefinitionValueSerializer(serializers.ModelSerializer):
     class Meta:
-        model = FieldGroup
+        model = FieldDefinitionValue
         fields = [
-            'id',
-            'name',
-            'code',
-            'has_expiry',
-            'definitions',
+            'id', 'employee', 'definition',
+            'value_text', 'value_number', 'value_date',
+            'value_file', 'value_select', 'value_list'
         ]
-
-class EmployeeFieldValueSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = EmployeeFieldValue
-        fields = ('id','employee','definition','value_text','value_date','value_file')

@@ -1,50 +1,57 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
-from datetime import timedelta
-
 from employees.models import Employee
+from fields.models import FieldDefinitionValue
 from documents.models import DocumentVersion
-from tags.models import TagRequest
-from approvals.models import PermissionRequest
-from notifications.models import Notification
+from approvals.models import TagRequest, PermissionRequest
+from datetime import date, timedelta
 
-class DashboardView(APIView):
-    """
-    Возвращает набор метрик для дашборда:
-    - total_employees: всего сотрудников в зоне видимости
-    - expiring_documents: сколько документов истекает в ближайшие 30 дней
-    - pending_tag_requests: сколько запросов на новые теги ждут одобрения
-    - pending_permission_requests: сколько запросов на права ждут одобрения
-    - unread_notifications: сколько у текущего пользователя непрочитанных уведомлений
-    """
+class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
+        qs = Employee.objects.all()
 
-        if user.is_superuser:
-            total_employees = Employee.objects.count()
-        else:
-            total_employees = Employee.objects.filter(manager=user).count()
+        # Фильтрация по зонам видимости (directions, positions)
+        dir_ids = set(user.roles.values_list('directions__id', flat=True))
+        pos_ids = set(user.roles.values_list('positions__id', flat=True))
+        if dir_ids:
+            qs = qs.filter(direction_id__in=dir_ids)
+        if pos_ids:
+            qs = qs.filter(position_id__in=pos_ids)
 
-        threshold_date = timezone.now().date() + timedelta(days=30)
-        expiring_documents = DocumentVersion.objects.filter(expiry_date__lte=threshold_date).count()
+        total_employees = qs.count()
 
-        pending_tag_requests = TagRequest.objects.filter(status='pending').count()
+        today = date.today()
+        in_7_days = today + timedelta(days=7)
+        in_30_days = today + timedelta(days=30)
 
-        pending_permission_requests = PermissionRequest.objects.filter(status='pending').count()
+        # Истекающие документы
+        expiring_docs_7 = DocumentVersion.objects.filter(expiration_date__range=[today, in_7_days]).count()
+        expiring_docs_30 = DocumentVersion.objects.filter(expiration_date__range=[today, in_30_days]).count()
 
-        unread_notifications = Notification.objects.filter(
-            user=user,
-            read=False
+        # Истекающие динамические поля (тип date)
+        expiring_fields_7 = FieldDefinitionValue.objects.filter(
+            definition__field_type='date',
+            value_date__range=[today, in_7_days]
         ).count()
+        expiring_fields_30 = FieldDefinitionValue.objects.filter(
+            definition__field_type='date',
+            value_date__range=[today, in_30_days]
+        ).count()
+
+        # Pending-запросы (если admin)
+        pending_tag_requests = TagRequest.objects.filter(status='pending').count() if user.is_staff else 0
+        pending_perm_requests = PermissionRequest.objects.filter(status='pending').count() if user.is_staff else 0
 
         return Response({
             'total_employees': total_employees,
-            'expiring_documents': expiring_documents,
+            'expiring_documents_7d': expiring_docs_7,
+            'expiring_documents_30d': expiring_docs_30,
+            'expiring_fields_7d': expiring_fields_7,
+            'expiring_fields_30d': expiring_fields_30,
             'pending_tag_requests': pending_tag_requests,
-            'pending_permission_requests': pending_permission_requests,
-            'unread_notifications': unread_notifications,
+            'pending_permission_requests': pending_perm_requests
         })

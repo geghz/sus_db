@@ -3,20 +3,12 @@ from .models import Tag, TagRequest
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name', 'system')
+    list_display = ['name', 'is_system', 'owner']
+    list_filter = ['is_system', 'owner']
+    search_fields = ['name']
 
 @admin.register(TagRequest)
 class TagRequestAdmin(admin.ModelAdmin):
-    list_display = ('tag_name', 'user', 'status', 'created_at')
-    actions = ['approve_requests', 'reject_requests']
-
-    def approve_requests(self, request, queryset):
-        for req in queryset:
-            req.status='approved'
-            req.save()
-            Tag.objects.get_or_create(name=req.tag_name, defaults={'system':True})
-    approve_requests.short_description = "Одобрить выбранные запросы"
-
-    def reject_requests(self, request, queryset):
-        queryset.update(status='rejected')
-    reject_requests.short_description = "Отклонить выбранные запросы"
+    list_display = ['tag_name', 'user', 'status', 'created_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['tag_name', 'user__username']

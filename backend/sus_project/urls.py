@@ -11,6 +11,7 @@ urlpatterns = [
 
     path('api/accounts/', include('accounts.urls')),
     path('api/dashboard/', include('dashboard.urls')),
+    
     path('api/employees/', include('employees.urls')),
     path('api/documents/', include('documents.urls')),
     path('api/tags/', include('tags.urls')),

@@ -1,38 +1,53 @@
 from django.db import models
-from employees.models import Employee
-
-FIELD_TYPES = [
-    ('text','Текст'),
-    ('date','Дата'),
-    ('file','Файл'),
-]
 
 class FieldGroup(models.Model):
-    name = models.CharField("Группа полей", max_length=100)
-    code = models.CharField(max_length=100, unique=True, blank=True, null=True)
-
-    @property
-    def has_expiry(self) -> bool:
-        return self.definitions.filter(field_type='date').exists()
+    name = models.CharField(max_length=100, unique=True, blank=True, null=True)
 
     def __str__(self):
         return self.name
 
 class FieldDefinition(models.Model):
-    group = models.ForeignKey(FieldGroup, on_delete=models.CASCADE, related_name='definitions')
-    name = models.CharField("Название поля", max_length=100)
-    field_type = models.CharField("Тип", max_length=10, choices=FIELD_TYPES)
-    required = models.BooleanField("Обязательное", default=False)
+    FIELD_TYPES = [
+        ('text', 'Text'),
+        ('multiline', 'Multiline'),
+        ('number', 'Number'),
+        ('date', 'Date'),
+        ('file', 'File'),
+        ('select', 'Select'),
+        ('multiselect', 'MultiSelect'),
+        ('boolean', 'Boolean'),
+        ('email', 'Email'),
+        ('url', 'URL'),
+        ('phone', 'Phone'),
+        ('currency', 'Currency')
+    ]
+    group = models.ForeignKey(
+        FieldGroup, related_name='definitions', on_delete=models.CASCADE
+    )
+    code = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    label = models.CharField(max_length=200, null=True, blank=True)
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES)
+    options = models.JSONField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.group.name} / {self.name}"
+        return f"{self.group.name} - {self.label}"
 
-class EmployeeFieldValue(models.Model):
-    employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='field_values')
-    definition = models.ForeignKey(FieldDefinition, on_delete=models.CASCADE)
+class FieldDefinitionValue(models.Model):
+    employee = models.ForeignKey(
+        'employees.Employee', related_name='dynamic_fields', on_delete=models.CASCADE, null=True, blank=True
+    )
+    definition = models.ForeignKey(
+        FieldDefinition, related_name='values', on_delete=models.CASCADE, null=True, blank=True
+    )
     value_text = models.TextField(blank=True, null=True)
+    value_number = models.DecimalField(blank=True, null=True, max_digits=12, decimal_places=2)
     value_date = models.DateField(blank=True, null=True)
-    value_file = models.FileField(upload_to='field_values/', blank=True, null=True)
+    value_file = models.FileField(blank=True, null=True, upload_to='fields/')
+    value_select = models.CharField(blank=True, null=True, max_length=200)
+    value_list = models.JSONField(blank=True, null=True)  # for multiline/multiselect
 
     class Meta:
-        unique_together = ('employee','definition')
+        unique_together = ('employee', 'definition')
+
+    def __str__(self):
+        return f"{self.employee} - {self.definition.code}"
